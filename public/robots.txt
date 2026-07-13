@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /deblocage-reussi
+
+Sitemap: https://www.plandtable.fr/sitemap.xml

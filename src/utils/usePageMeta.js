@@ -1,14 +1,33 @@
 import { useEffect } from 'react'
 
-export function usePageMeta(title, description) {
+const SITE_ORIGIN = 'https://www.plandtable.fr'
+
+export function usePageMeta(title, description, { noindex = false } = {}) {
   useEffect(() => {
     document.title = title
-    let tag = document.querySelector('meta[name="description"]')
-    if (!tag) {
-      tag = document.createElement('meta')
-      tag.setAttribute('name', 'description')
-      document.head.appendChild(tag)
+
+    let descriptionTag = document.querySelector('meta[name="description"]')
+    if (!descriptionTag) {
+      descriptionTag = document.createElement('meta')
+      descriptionTag.setAttribute('name', 'description')
+      document.head.appendChild(descriptionTag)
     }
-    tag.setAttribute('content', description)
-  }, [title, description])
+    descriptionTag.setAttribute('content', description)
+
+    let canonicalTag = document.querySelector('link[rel="canonical"]')
+    if (!canonicalTag) {
+      canonicalTag = document.createElement('link')
+      canonicalTag.setAttribute('rel', 'canonical')
+      document.head.appendChild(canonicalTag)
+    }
+    canonicalTag.setAttribute('href', `${SITE_ORIGIN}${window.location.pathname}`)
+
+    let robotsTag = document.querySelector('meta[name="robots"]')
+    if (!robotsTag) {
+      robotsTag = document.createElement('meta')
+      robotsTag.setAttribute('name', 'robots')
+      document.head.appendChild(robotsTag)
+    }
+    robotsTag.setAttribute('content', noindex ? 'noindex, nofollow' : 'index, follow')
+  }, [title, description, noindex])
 }

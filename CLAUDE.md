@@ -107,7 +107,7 @@ Géométrie des tables et sièges centralisée dans `src/utils/tableGeometry.js`
 - [x] J5 : exports PDF (plan par table + liste alphabétique) + auto-save localStorage
 - [x] J6 : paywall Stripe Payment Link + flag unlocked
 - [x] J7-8 : page d'accueil avec démo jouable sans inscription + 3-4 pages SEO ("plan de table mariage", "comment placer les invités mariage", "logiciel plan de table gratuit")
-- [ ] J9 : branchement du domaine plandtable.fr sur Vercel, Google Search Console, vérification mobile complète
+- [x] J9 : branchement du domaine plandtable.fr sur Vercel (déjà fait, vérifié), robots.txt/sitemap.xml/canonical prêts pour Search Console, vérification mobile complète en production
 - [ ] J10 : contenus de lancement (vidéos TikTok/Pinterest format "6 embrouilles familiales placées en 10 secondes", post honnête sur un forum mariage)
 
 ## Statut actuel
@@ -134,4 +134,12 @@ Note sur les contraintes "ensemble"/"séparés" : elles portent sur l'adjacence 
 
 Décision produit actée avec l'utilisateur : pas de configuration de la salle par IA conversationnelle (nécessiterait un backend/clé API et un coût variable par utilisation, en contradiction avec le "aucun backend" verrouillé) — remplacé par le tagging manuel des invités + contraintes de groupe, qui couvre le même besoin ("table famille", "table amis") sans ces inconvénients.
 
-Prochaine étape : J9 (domaine + Search Console + vérification mobile), après avoir complété les mentions légales.
+**Incident résolu (J9)** : aucun commit n'avait jamais été poussé au-delà du tout premier commit `init` (template Vite vide) — tout le travail J1-J8 n'existait qu'en local. Vercel déployait donc en continu la version vide d'origine, d'où un 404 après redirection Stripe vers `/deblocage-reussi`. Poussé sur `main` (commit `830b6c5`) ; **toujours vérifier `git status`/`git log` avant de considérer une session "terminée"**, un travail non poussé ne sert à rien en production.
+
+J9 : le domaine plandtable.fr était déjà branché sur Vercel (fait avant cette session, hors de mon contrôle). Vérifié que `http(s)://plandtable.fr` et `http://www.plandtable.fr` redirigent proprement vers `https://www.plandtable.fr` (200, pas de boucle). Ajouté `public/robots.txt` et `public/sitemap.xml` — **attention** : sans fichier réel, le rewrite SPA de `vercel.json` les interceptait et servait du HTML à leur place (bug corrigé). `usePageMeta` gère maintenant aussi une balise `<link rel="canonical">` par page et un `<meta name="robots">` (utilisé pour passer `PaymentSuccessPage` en `noindex` : page transactionnelle, pas de contenu à indexer). `index.html` a aussi une meta description et un canonical statiques par défaut (fallback avant exécution du JS).
+
+**Bug mobile trouvé en testant sur le vrai site avec un profil iPhone (`devices['iPhone 13']` de Playwright, pas juste un viewport 390px manuel)** : `.inline-form` (GuestPanel, TablePanel) n'avait pas `flex-wrap: wrap`, et le bouton "Ajouter une table" (`white-space: nowrap`) ne pouvait pas rétrécir sous sa largeur de texte — ça poussait toute la ligne hors du viewport et créait un scroll horizontal sur la page entière. Un simple screenshot ne le montrait pas franchement ; c'est la mesure programmatique (`scrollWidth > clientWidth`) qui l'a révélé. Corrigé.
+
+Search Console : je ne peux pas faire la vérification moi-même (nécessite le compte Google de l'utilisateur). Le terrain est prêt côté code (sitemap, robots.txt, canonical) ; il reste à l'utilisateur d'aller sur https://search.google.com/search-console, ajouter la propriété `https://www.plandtable.fr`, vérifier (méthode DNS TXT chez OVH la plus simple, ou balise HTML), puis soumettre `https://www.plandtable.fr/sitemap.xml`.
+
+Prochaine étape : J10 (contenus de lancement), une fois les mentions légales complétées et Search Console vérifié côté utilisateur.

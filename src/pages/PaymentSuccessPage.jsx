@@ -4,7 +4,11 @@ import { loadProject, saveProject } from '../models/project'
 import { usePageMeta } from '../utils/usePageMeta'
 
 function PaymentSuccessPage() {
-  usePageMeta('Déblocage réussi — plandtable', 'Votre accès plandtable est débloqué jusqu\'au jour J.')
+  usePageMeta(
+    'Déblocage réussi — plandtable',
+    'Votre accès plandtable est débloqué jusqu\'au jour J.',
+    { noindex: true },
+  )
 
   useEffect(() => {
     const project = loadProject()
