@@ -80,11 +80,33 @@ function computeCost(seats, tables, constraints, tablePositions) {
           const b = guestSeat.get(c.guestIds[j])
           if (!a || !b || a.tableId !== b.tableId) {
             cost += TOGETHER_DIFFERENT_TABLE_PENALTY
-            violated.add(c)
           } else if (!areSeatsAdjacent(tableById.get(a.tableId), a.seatIndex, b.seatIndex)) {
             cost += TOGETHER_NOT_ADJACENT_PENALTY
-            violated.add(c)
           }
+        }
+      }
+
+      // "Satisfait" : pour une paire, on exige la vraie adjacence ("côte à
+      // côte"). Pour un groupe de 3+ (contrainte par tag), exiger que TOUTES
+      // les paires soient mutuellement adjacentes est géométriquement
+      // impossible dès que le groupe dépasse 3 personnes (chacun n'a que 2
+      // voisins) — la barre réaliste est alors "tous à la même table" ; le
+      // coût ci-dessus continue de pousser vers un vrai regroupement.
+      if (c.guestIds.length <= 2) {
+        const [a, b] = c.guestIds.map((id) => guestSeat.get(id))
+        if (
+          !a ||
+          !b ||
+          a.tableId !== b.tableId ||
+          !areSeatsAdjacent(tableById.get(a.tableId), a.seatIndex, b.seatIndex)
+        ) {
+          violated.add(c)
+        }
+      } else {
+        const seatsForGuests = c.guestIds.map((id) => guestSeat.get(id))
+        const tableIds = new Set(seatsForGuests.filter(Boolean).map((s) => s.tableId))
+        if (seatsForGuests.some((s) => !s) || tableIds.size > 1) {
+          violated.add(c)
         }
       }
     } else if (c.type === 'apart') {

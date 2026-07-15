@@ -642,13 +642,18 @@ input.project-name-input:focus {
   opacity: 1;
 }
 
-.tag-add-select {
+.tag-add-input {
   font-size: 12px;
   padding: 3px 8px;
   border-radius: 999px;
   border: 1px dashed var(--border);
   background: transparent;
   color: var(--text);
+  width: 84px;
+}
+.tag-add-input:focus {
+  width: 130px;
+  border-style: solid;
 }
 
 .table-label-input {

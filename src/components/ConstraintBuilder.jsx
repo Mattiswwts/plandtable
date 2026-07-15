@@ -16,29 +16,32 @@ function ConstraintBuilder({ guests, tables, constraints, onAddConstraint, onRem
   const [subjectMode, setSubjectMode] = useState('guest')
   const [tag, setTag] = useState('')
 
-  const needsTwoGuests = type === 'together' || type === 'apart'
+  const needsTable = type === 'nearTable' || type === 'farFromTable'
   const availableTags = [...new Set(guests.flatMap((g) => g.tags))]
 
-  const canSubmit = needsTwoGuests
-    ? guestA && guestB && guestA !== guestB
-    : tableId && (subjectMode === 'guest' ? guestA : tag)
+  const canSubmit =
+    subjectMode === 'tag'
+      ? Boolean(tag) && (!needsTable || Boolean(tableId))
+      : needsTable
+        ? Boolean(guestA) && Boolean(tableId)
+        : Boolean(guestA) && Boolean(guestB) && guestA !== guestB
 
   function handleSubmit(e) {
     e.preventDefault()
     if (!canSubmit) return
 
-    if (needsTwoGuests) {
-      onAddConstraint({ type, guestIds: [guestA, guestB], tableId: null })
-    } else if (subjectMode === 'tag') {
+    if (subjectMode === 'tag') {
       const groupGuestIds = guests.filter((g) => g.tags.includes(tag)).map((g) => g.id)
       onAddConstraint({
         type,
         guestIds: groupGuestIds,
-        tableId,
+        tableId: needsTable ? tableId : null,
         label: `Groupe "${tag}"`,
       })
-    } else {
+    } else if (needsTable) {
       onAddConstraint({ type, guestIds: [guestA], tableId })
+    } else {
+      onAddConstraint({ type, guestIds: [guestA, guestB], tableId: null })
     }
 
     setGuestA('')
@@ -66,14 +69,14 @@ function ConstraintBuilder({ guests, tables, constraints, onAddConstraint, onRem
         ))}
       </div>
 
-      {!needsTwoGuests && availableTags.length > 0 && (
+      {availableTags.length > 0 && (
         <div className="constraint-type-choices">
           <button
             type="button"
             className={`chip-btn${subjectMode === 'guest' ? ' active' : ''}`}
             onClick={() => setSubjectMode('guest')}
           >
-            Un invité
+            {needsTable ? 'Un invité' : 'Deux invités'}
           </button>
           <button
             type="button"
@@ -86,7 +89,25 @@ function ConstraintBuilder({ guests, tables, constraints, onAddConstraint, onRem
       )}
 
       <form className="constraint-form" onSubmit={handleSubmit}>
-        {needsTwoGuests ? (
+        {subjectMode === 'tag' && availableTags.length > 0 ? (
+          <select value={tag} onChange={(e) => setTag(e.target.value)}>
+            <option value="">Groupe</option>
+            {availableTags.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        ) : needsTable ? (
+          <select value={guestA} onChange={(e) => setGuestA(e.target.value)}>
+            <option value="">Invité</option>
+            {guests.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        ) : (
           <>
             <select value={guestA} onChange={(e) => setGuestA(e.target.value)}>
               <option value="">Invité A</option>
@@ -105,36 +126,16 @@ function ConstraintBuilder({ guests, tables, constraints, onAddConstraint, onRem
               ))}
             </select>
           </>
-        ) : (
-          <>
-            {subjectMode === 'tag' && availableTags.length > 0 ? (
-              <select value={tag} onChange={(e) => setTag(e.target.value)}>
-                <option value="">Groupe</option>
-                {availableTags.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <select value={guestA} onChange={(e) => setGuestA(e.target.value)}>
-                <option value="">Invité</option>
-                {guests.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            <select value={tableId} onChange={(e) => setTableId(e.target.value)}>
-              <option value="">Table</option>
-              {tables.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </>
+        )}
+        {needsTable && (
+          <select value={tableId} onChange={(e) => setTableId(e.target.value)}>
+            <option value="">Table</option>
+            {tables.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
         )}
         <button type="submit" disabled={!canSubmit}>
           Ajouter

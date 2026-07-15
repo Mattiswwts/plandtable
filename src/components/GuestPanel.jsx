@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { parseGuestList } from '../utils/parseGuestList'
 
 const SUGGESTED_TAGS = ['Famille', 'Amis', 'Collègues', 'Enfants']
+const TAG_DATALIST_ID = 'guest-tag-suggestions'
 
 function GuestPanel({ guests, onAddGuest, onAddGuests, onRemoveGuest, onAddTag, onRemoveTag }) {
   const [name, setName] = useState('')
@@ -24,6 +25,19 @@ function GuestPanel({ guests, onAddGuest, onAddGuests, onRemoveGuest, onAddTag, 
     setPasteText('')
     setShowPaste(false)
   }
+
+  function handleTagInputKeyDown(e, guestId) {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    const value = e.target.value.trim()
+    if (!value) return
+    onAddTag(guestId, value)
+    e.target.value = ''
+  }
+
+  // Suggestions = tags prédéfinis + tags déjà utilisés sur d'autres invités,
+  // pour pouvoir réutiliser un tag personnalisé ("Amies du boulot") d'un clic.
+  const knownTags = [...new Set([...SUGGESTED_TAGS, ...guests.flatMap((g) => g.tags)])]
 
   return (
     <section className="panel guest-panel">
@@ -73,10 +87,14 @@ function GuestPanel({ guests, onAddGuest, onAddGuests, onRemoveGuest, onAddTag, 
       )}
 
       {guests.length > 0 ? (
-        <ul className="guest-list">
-          {guests.map((guest) => {
-            const availableTags = SUGGESTED_TAGS.filter((t) => !guest.tags.includes(t))
-            return (
+        <>
+          <datalist id={TAG_DATALIST_ID}>
+            {knownTags.map((tag) => (
+              <option key={tag} value={tag} />
+            ))}
+          </datalist>
+          <ul className="guest-list">
+            {guests.map((guest) => (
               <li key={guest.id}>
                 <div className="guest-row">
                   <div className="guest-row-main">
@@ -103,29 +121,20 @@ function GuestPanel({ guests, onAddGuest, onAddGuests, onRemoveGuest, onAddTag, 
                         </button>
                       </span>
                     ))}
-                    {availableTags.length > 0 && (
-                      <select
-                        className="tag-add-select"
-                        value=""
-                        onChange={(e) => {
-                          if (e.target.value) onAddTag(guest.id, e.target.value)
-                        }}
-                        aria-label={`Ajouter un tag à ${guest.name}`}
-                      >
-                        <option value="">+ tag</option>
-                        {availableTags.map((tag) => (
-                          <option key={tag} value={tag}>
-                            {tag}
-                          </option>
-                        ))}
-                      </select>
-                    )}
+                    <input
+                      type="text"
+                      className="tag-add-input"
+                      placeholder="+ tag"
+                      list={TAG_DATALIST_ID}
+                      onKeyDown={(e) => handleTagInputKeyDown(e, guest.id)}
+                      aria-label={`Ajouter un tag à ${guest.name}`}
+                    />
                   </div>
                 </div>
               </li>
-            )
-          })}
-        </ul>
+            ))}
+          </ul>
+        </>
       ) : (
         <p className="empty-hint">Aucun invité pour l'instant.</p>
       )}
