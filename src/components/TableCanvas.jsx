@@ -5,10 +5,10 @@ import {
   rectTableSeats,
   tableFootprint,
   seatLabelPosition,
+  seatHitArea,
   estimateTextWidth,
+  LABEL_LINE_HEIGHT,
 } from '../utils/tableGeometry'
-
-const LABEL_LINE_HEIGHT = 14
 
 function TableCanvas({
   tables,
@@ -256,6 +256,7 @@ function TableCanvas({
                   const occupantId = seatOccupant.get(`${table.id}:${seat.index}`)
                   const occupant = occupantId ? guestById.get(occupantId) : null
                   const label = seatLabelPosition(table, seat)
+                  const hitArea = occupant ? seatHitArea(table, seat, occupant.name) : null
                   return (
                     <g
                       key={seat.index}
@@ -263,6 +264,15 @@ function TableCanvas({
                       className={`seat${occupant ? ' occupied' : ''}${selectedGuestId === occupantId ? ' selected' : ''}`}
                       onClick={() => handleSeatClick(table.id, seat.index)}
                     >
+                      {hitArea && (
+                        <rect
+                          x={hitArea.x}
+                          y={hitArea.y}
+                          width={hitArea.width}
+                          height={hitArea.height}
+                          fill="transparent"
+                        />
+                      )}
                       <circle r={SEAT_RADIUS} />
                       {occupant && (
                         <text

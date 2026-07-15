@@ -84,6 +84,8 @@ export function estimateTextWidth(text, fontSize = 12) {
   return text.length * fontSize * 0.56
 }
 
+export const LABEL_LINE_HEIGHT = 14
+
 // Position et alignement du nom complet d'un invité, radialement à
 // l'extérieur de son siège (donc toujours plus loin de la table que le
 // siège lui-même : ne peut jamais chevaucher la table).
@@ -101,4 +103,40 @@ export function seatLabelPosition(table, seat) {
     anchor: ux > 0.35 ? 'start' : ux < -0.35 ? 'end' : 'middle',
     baseline: uy > 0.35 ? 'hanging' : uy < -0.35 ? 'auto' : 'middle',
   }
+}
+
+// Zone de clic/toucher d'un siège, en coordonnées locales (relatives au
+// centre du siège) : englobe à la fois le petit cercle et son étiquette de
+// nom, pour qu'il n'y ait pas de "trou" mort entre les deux où un tap ne
+// déclencherait rien.
+export function seatHitArea(table, seat, guestName) {
+  const label = seatLabelPosition(table, seat)
+  const localLabelX = label.x - seat.cx
+  const localLabelY = label.y - seat.cy
+  const textWidth = estimateTextWidth(guestName)
+  const pad = 6
+
+  let x1 = -SEAT_RADIUS - pad
+  let x2 = SEAT_RADIUS + pad
+  if (label.anchor === 'start') {
+    x2 = Math.max(x2, localLabelX + textWidth + pad)
+  } else if (label.anchor === 'end') {
+    x1 = Math.min(x1, localLabelX - textWidth - pad)
+  } else {
+    x1 = Math.min(x1, localLabelX - textWidth / 2 - pad)
+    x2 = Math.max(x2, localLabelX + textWidth / 2 + pad)
+  }
+
+  let y1 = -SEAT_RADIUS - pad
+  let y2 = SEAT_RADIUS + pad
+  if (label.baseline === 'hanging') {
+    y2 = Math.max(y2, localLabelY + LABEL_LINE_HEIGHT + pad)
+  } else if (label.baseline === 'auto') {
+    y1 = Math.min(y1, localLabelY - LABEL_LINE_HEIGHT - pad)
+  } else {
+    y1 = Math.min(y1, localLabelY - LABEL_LINE_HEIGHT / 2 - pad)
+    y2 = Math.max(y2, localLabelY + LABEL_LINE_HEIGHT / 2 + pad)
+  }
+
+  return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 }
 }

@@ -761,6 +761,12 @@ input.project-name-input:focus {
 .canvas-panel {
   flex: 1 1 100%;
 }
+.canvas-panel .hint {
+  /* Hauteur réservée pour le plus long message (invité sélectionné) afin
+     que la sélection d'un invité ne décale pas les sièges sous les pieds
+     de l'utilisateur au moment de toucher le siège suivant. */
+  min-height: 3.2em;
+}
 .canvas-panel.locked .svg-scroll {
   opacity: 0.6;
 }
@@ -774,7 +780,10 @@ input.project-name-input:focus {
   margin-bottom: 14px;
   border: 1px dashed var(--border);
   border-radius: 12px;
-  min-height: 44px;
+  /* Assez haut pour 2 lignes : le message "Touchez ici pour libérer la
+     place de ..." peut être plus long que "Tous les invités sont placés."
+     et ne doit pas décaler les sièges sous les pieds de l'utilisateur. */
+  min-height: 80px;
 }
 .guest-pool.droppable {
   border-color: var(--accent-gold);
@@ -801,6 +810,14 @@ input.project-name-input:focus {
   border-radius: 14px;
   background: var(--bg-alt);
   padding: 4px;
+}
+.svg-scroll svg {
+  /* Le plan garde sa taille naturelle tant qu'il rentre, et se réduit
+     proportionnellement (au lieu de nécessiter un scroll horizontal caché
+     dans cette petite zone) dès que l'écran est plus étroit que lui. */
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
 
 .table-shape {
