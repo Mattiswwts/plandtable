@@ -13,8 +13,8 @@
   --shadow: rgba(66, 55, 40, 0.07) 0 8px 24px -6px;
   --shadow-sm: rgba(66, 55, 40, 0.05) 0 2px 10px;
 
-  --sans: 'Inter', 'Segoe UI', system-ui, Roboto, sans-serif;
-  --serif: 'Playfair Display', Georgia, 'Iowan Old Style', serif;
+  --sans: 'Work Sans', 'Segoe UI', system-ui, Roboto, sans-serif;
+  --serif: 'Fraunces', Georgia, 'Iowan Old Style', serif;
 
   font: 17px/160% var(--sans);
   color-scheme: light;
@@ -32,6 +32,9 @@
 
 body {
   margin: 0;
+  /* Grain léger pour casser l'aplat de couleur — quasi imperceptible,
+     juste assez pour que le fond ne lise pas comme un flat design générique. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
 }
 
 #root {
@@ -47,7 +50,8 @@ h1,
 h2,
 h3 {
   font-family: var(--serif);
-  font-weight: 600;
+  font-optical-sizing: auto;
+  font-weight: 440;
   color: var(--text-h);
   letter-spacing: -0.01em;
 }

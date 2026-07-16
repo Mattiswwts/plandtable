@@ -1,4 +1,4 @@
-import { exportTablePlanPdf, exportGuestListPdf } from '../utils/exportPdf'
+import { exportTablePlanPdf, exportGuestListPdf, exportPlaceCardsPdf } from '../utils/exportPdf'
 
 function ExportPanel({ project, locked, onRequestUnlock }) {
   function handleExport(exportFn) {
@@ -24,7 +24,13 @@ function ExportPanel({ project, locked, onRequestUnlock }) {
         <button type="button" onClick={() => handleExport(exportGuestListPdf)}>
           Liste alphabétique (PDF)
         </button>
+        <button type="button" onClick={() => handleExport(exportPlaceCardsPdf)}>
+          Marque-places (PDF)
+        </button>
       </div>
+      <p className="hint">
+        Les marque-places sont prêts à imprimer et découper, un par invité placé.
+      </p>
     </section>
   )
 }

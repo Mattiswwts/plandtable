@@ -10,7 +10,7 @@ Parcours utilisateur cible :
 3. Il déclare ses contraintes en langage simple ("X et Y ensemble", "A et B séparés", "près de la table d'honneur", "équilibrer les tables")
 4. L'algo propose un placement en un clic
 5. Il ajuste au glisser-déposer si besoin
-6. Il exporte en PDF (plan par table + liste alphabétique)
+6. Il exporte en PDF (plan par table dessiné, liste alphabétique, marque-places imprimables)
 
 Utilisable SANS créer de compte. Tout tourne côté navigateur. C'est une arme contre les gros sites qui forcent l'inscription.
 
@@ -95,7 +95,7 @@ Géométrie des tables et sièges centralisée dans `src/utils/tableGeometry.js`
 - Pas de sur-ingénierie : pas de tests unitaires exhaustifs à ce stade, pas d'abstractions prématurées
 - Mobile-first sérieux : les futurs mariés bossent beaucoup sur téléphone
 - Textes de l'interface en français
-- Design sobre et rassurant, thème mariage léger (pas de rose criard) : blanc cassé, typographie élégante (Playfair Display pour les titres, Inter pour le texte courant, via Google Fonts), accent doré + vert sauge
+- Design sobre et rassurant, thème mariage léger (pas de rose criard) : blanc cassé, typographie élégante (Fraunces pour les titres, Work Sans pour le texte courant, via Google Fonts), accent doré + vert sauge
 - Commits fréquents avec messages courts
 
 ## Roadmap
@@ -141,5 +141,14 @@ J9 : le domaine plandtable.fr était déjà branché sur Vercel (fait avant cett
 **Bug mobile trouvé en testant sur le vrai site avec un profil iPhone (`devices['iPhone 13']` de Playwright, pas juste un viewport 390px manuel)** : `.inline-form` (GuestPanel, TablePanel) n'avait pas `flex-wrap: wrap`, et le bouton "Ajouter une table" (`white-space: nowrap`) ne pouvait pas rétrécir sous sa largeur de texte — ça poussait toute la ligne hors du viewport et créait un scroll horizontal sur la page entière. Un simple screenshot ne le montrait pas franchement ; c'est la mesure programmatique (`scrollWidth > clientWidth`) qui l'a révélé. Corrigé.
 
 Search Console : je ne peux pas faire la vérification moi-même (nécessite le compte Google de l'utilisateur). Le terrain est prêt côté code (sitemap, robots.txt, canonical) ; il reste à l'utilisateur d'aller sur https://search.google.com/search-console, ajouter la propriété `https://www.plandtable.fr`, vérifier (méthode DNS TXT chez OVH la plus simple, ou balise HTML), puis soumettre `https://www.plandtable.fr/sitemap.xml`.
+
+**Refonte visuelle + fonctionnalités (retour utilisateur "trop vibe codé", canvas mobile pas convaincant, veut du "beau")** :
+
+- Typographie changée : Fraunces (titres, italique sur les gros titres, poids variables 340/440/560) + Work Sans (texte), à la place de Playfair Display + Inter — combo jugé trop reconnaissable/générique pour un site "IA-généré". Grain de fond très léger (SVG feTurbulence en data-URI, opacity ~0.035) pour casser l'aplat de couleur.
+- Hero refait en composition asymétrique (texte calé à gauche, illustration signature à droite : `HeroDiagram.jsx`, un diagramme de table stylisé en SVG, plus une seule branche botanique au lieu de deux en miroir) — la symétrie parfaite du hero précédent contribuait au côté "template".
+- `TableCanvas` : nouveau mode "une table à la fois" (`focusedTableId` + navigation prev/next/chips) qui se déclenche automatiquement sur mobile dès 2 tables (`matchMedia('(max-width: 720px)')` au premier rendu). Sans ça, un plan à plusieurs tables réduit pour tenir sur l'écran devenait illisible/dur à toucher.
+- Export PDF du plan par table entièrement redessiné en vectoriel (cercles/rectangles/sièges/noms positionnés comme à l'écran, via la même géométrie que `TableCanvas`) au lieu d'une liste de noms — voir `drawTableDiagram` dans `exportPdf.js`.
+- **Bug jsPDF non résolu, contourné** : le moteur de texte natif de jsPDF (police par défaut) rend parfois la fin de certains mots ("Fitzgerald", "Van Der Berg"...) dans une autre couleur que celle demandée. Reproduit de façon fiable mais imprévisible dans son déclencheur exact (indépendant de la longueur du texte, de l'alignement, de la police, de `renderingMode` — tout testé). Contournement définitif : les textes contenant du contenu utilisateur (noms d'invités, libellés de table, nom du projet) sont rendus via un canvas HTML puis intégrés en image PNG (`renderTextToImage`/`drawLabel` dans `exportPdf.js`), pas via `doc.text()`. Les chaînes 100% statiques de l'app ("Plan de table", "Table ronde — X place(s)"...) restent en texte natif jsPDF, jamais concernées par le bug dans nos tests. **Si ce texte redevient bleu un jour dans un export, ne pas re-déboguer jsPDF : vérifier d'abord qu'un nouvel appel `doc.text()` n'a pas été ajouté par erreur pour du contenu utilisateur.**
+- Nouvelle fonctionnalité : export "Marque-places (PDF)" (`exportPlaceCardsPdf`) — une carte par invité placé (nom + table), grille 2×4 par page A4 avec bordure pointillée à découper. Décision produit du 2026-07-16 : plutôt qu'une IA conversationnelle pour configurer la salle (écartée pour coût/backend, voir plus haut), ni "3 propositions de placement" (alternative proposée), l'utilisateur a choisi cette fonctionnalité car elle résout un vrai problème physique du jour J qu'aucun concurrent ne couvre dans le même outil.
 
 Prochaine étape : J10 (contenus de lancement), une fois les mentions légales complétées et Search Console vérifié côté utilisateur.

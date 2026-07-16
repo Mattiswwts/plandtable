@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   SEAT_RADIUS,
   roundTableSeats,
@@ -23,6 +23,23 @@ function TableCanvas({
   const svgRef = useRef(null)
   const [selectedGuestId, setSelectedGuestId] = useState(null)
   const [dragTable, setDragTable] = useState(null) // { id, x, y }
+  const [focusedTableId, setFocusedTableId] = useState(null)
+  const hasAutoFocusedRef = useRef(false)
+
+  // Sur petit écran, un plan avec plusieurs tables devient vite illisible/dur
+  // à toucher une fois réduit pour tenir sur l'écran : on démarre en mode
+  // "une table à la fois" par défaut (l'utilisateur peut revenir à la vue
+  // d'ensemble). Ne se déclenche qu'une fois, pour ne pas écraser un choix
+  // manuel ultérieur.
+  useEffect(() => {
+    if (hasAutoFocusedRef.current || tables.length < 2) return
+    hasAutoFocusedRef.current = true
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches) {
+      setFocusedTableId(tables[0].id)
+    }
+  }, [tables])
+
+  const effectiveFocusedId = tables.some((t) => t.id === focusedTableId) ? focusedTableId : null
 
   const guestById = new Map(guests.map((g) => [g.id, g]))
   const seatOccupant = new Map()
@@ -114,9 +131,18 @@ function TableCanvas({
     window.addEventListener('pointerup', handleUp)
   }
 
-  const displayTables = tables.map((t) =>
+  const allDisplayTables = tables.map((t) =>
     dragTable && dragTable.id === t.id ? { ...t, x: dragTable.x, y: dragTable.y } : t,
   )
+  const displayTables = effectiveFocusedId
+    ? allDisplayTables.filter((t) => t.id === effectiveFocusedId)
+    : allDisplayTables
+
+  function goToTable(offset) {
+    const index = tables.findIndex((t) => t.id === effectiveFocusedId)
+    const nextIndex = (index + offset + tables.length) % tables.length
+    setFocusedTableId(tables[nextIndex].id)
+  }
 
   // Géométrie calculée une seule fois par table, réutilisée pour le rendu
   // et pour calculer les limites réelles du plan (les noms longs peuvent
@@ -183,6 +209,42 @@ function TableCanvas({
     <section className={`panel canvas-panel${locked ? ' locked' : ''}`}>
       <h2>Plan de table</h2>
       <p className="hint">{hint}</p>
+
+      {tables.length > 1 && (
+        <div className="table-picker">
+          <button
+            type="button"
+            className={`chip-btn${!effectiveFocusedId ? ' active' : ''}`}
+            onClick={() => setFocusedTableId(null)}
+          >
+            Vue d'ensemble
+          </button>
+          {effectiveFocusedId ? (
+            <span className="table-picker-nav">
+              <button type="button" onClick={() => goToTable(-1)} aria-label="Table précédente">
+                ‹
+              </button>
+              <span className="table-picker-current">
+                {tables.find((t) => t.id === effectiveFocusedId)?.label}
+              </span>
+              <button type="button" onClick={() => goToTable(1)} aria-label="Table suivante">
+                ›
+              </button>
+            </span>
+          ) : (
+            tables.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className="chip-btn"
+                onClick={() => setFocusedTableId(t.id)}
+              >
+                {t.label}
+              </button>
+            ))
+          )}
+        </div>
+      )}
 
       <div
         className={`guest-pool${selectedIsSeated ? ' droppable' : ''}`}

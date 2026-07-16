@@ -28,7 +28,7 @@ function PricingPage() {
             <li>Contraintes (ensemble, séparés, près/loin d'une table)</li>
             <li>Placement automatique</li>
             <li>Ajustement manuel du plan</li>
-            <li>Export PDF</li>
+            <li>Export PDF (plan, liste, marque-places)</li>
           </ul>
         </div>
 
