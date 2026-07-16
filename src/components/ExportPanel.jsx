@@ -19,7 +19,7 @@ function ExportPanel({ project, locked, onRequestUnlock }) {
       )}
       <div className="export-actions">
         <button type="button" onClick={() => handleExport(exportTablePlanPdf)}>
-          Plan par table (PDF)
+          Plan de table (PDF)
         </button>
         <button type="button" onClick={() => handleExport(exportGuestListPdf)}>
           Liste alphabétique (PDF)

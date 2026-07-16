@@ -128,47 +128,52 @@ function diagramBounds(table, occupantNameOf) {
   return { minX, maxX, minY, maxY, geometry, isRound }
 }
 
-// Dessine le plan d'une table (forme + sièges + noms) dans le PDF, mis à
-// l'échelle pour tenir dans le cadre donné, centré sur (centerX, centerY).
-function drawTableDiagram(doc, table, guests, occupantIds, centerX, centerY, maxWidthMm, maxHeightMm) {
-  const normTable = { ...table, x: 0, y: 0 }
-  const occupantNameOf = (seatIndex) => {
+function occupantNameOfFor(guests, occupantIds) {
+  return (seatIndex) => {
     const guestId = occupantIds[seatIndex]
     return guestId ? guestName(guests, guestId) : null
   }
+}
 
-  const bounds = diagramBounds(normTable, occupantNameOf)
-  const spanX = bounds.maxX - bounds.minX
-  const spanY = bounds.maxY - bounds.minY
-  const scale = Math.min(maxWidthMm / spanX, maxHeightMm / spanY, MAX_SCALE)
-  const originX = centerX - ((bounds.minX + bounds.maxX) / 2) * scale
-  const originY = centerY - ((bounds.minY + bounds.maxY) / 2) * scale
-  const toPdf = (x, y) => ({ x: originX + x * scale, y: originY + y * scale })
+function occupantIdsForTable(placement, tableId) {
+  const occupantIds = []
+  for (const [guestId, p] of Object.entries(placement)) {
+    if (p.tableId === tableId) occupantIds[p.seatIndex] = guestId
+  }
+  return occupantIds
+}
 
-  const { geometry, isRound } = bounds
+// Dessine une table (forme + sièges + noms) à la position et à l'échelle
+// données par toPdf/scale — le point commun entre la page détail d'une
+// table (échelle calculée pour elle seule) et le plan d'ensemble (échelle
+// partagée par toutes les tables, à leurs positions réelles les unes par
+// rapport aux autres).
+function drawTableAtScale(doc, table, occupantNameOf, toPdf, scale, { nameFontSizeMm, tableFontSizeMm }) {
+  const isRound = table.shape === 'round'
+  const geometry = isRound ? roundTableSeats(table) : rectTableSeats(table)
 
   doc.setDrawColor(...SAGE)
   doc.setLineWidth(0.4)
   if (isRound) {
-    const c = toPdf(0, 0)
+    const c = toPdf(table.x, table.y)
     doc.circle(c.x, c.y, geometry.tableRadius * scale, 'S')
   } else {
-    const topLeft = toPdf(-geometry.width / 2, -geometry.height / 2)
+    const topLeft = toPdf(table.x - geometry.width / 2, table.y - geometry.height / 2)
     doc.roundedRect(topLeft.x, topLeft.y, geometry.width * scale, geometry.height * scale, 2, 2, 'S')
   }
 
-  const tableLabelPos = toPdf(0, 0)
+  const tableLabelPos = toPdf(table.x, table.y)
   drawLabel(doc, table.label, tableLabelPos.x, tableLabelPos.y, {
     align: 'center',
     baseline: 'middle',
-    fontSizeMm: 3,
+    fontSizeMm: tableFontSizeMm,
     weight: 600,
   })
 
   geometry.seats.forEach((seat) => {
     const name = occupantNameOf(seat.index)
     const p = toPdf(seat.cx, seat.cy)
-    const r = Math.max(1.3, SEAT_RADIUS * scale)
+    const r = Math.max(1.1, SEAT_RADIUS * scale)
 
     if (name) {
       doc.setFillColor(...GOLD)
@@ -180,26 +185,96 @@ function drawTableDiagram(doc, table, guests, occupantIds, centerX, centerY, max
     doc.circle(p.x, p.y, r, 'FD')
 
     if (name) {
-      const label = seatLabelPosition(normTable, seat)
+      const label = seatLabelPosition(table, seat)
       const lp = toPdf(label.x, label.y)
       const align = label.anchor === 'start' ? 'start' : label.anchor === 'end' ? 'end' : 'center'
-      drawLabel(doc, name, lp.x, lp.y, { align, baseline: label.baseline, fontSizeMm: 2.6 })
+      drawLabel(doc, name, lp.x, lp.y, { align, baseline: label.baseline, fontSizeMm: nameFontSizeMm })
     }
   })
 }
 
-export function exportTablePlanPdf(project) {
-  const { name, guests, tables, placement } = project
-  const doc = new jsPDF()
-  const title = name || 'Plan de table'
+// Dessine le plan d'une table seule, mis à l'échelle pour tenir dans le
+// cadre donné, centré sur (centerX, centerY).
+function drawTableDiagram(doc, table, guests, occupantIds, centerX, centerY, maxWidthMm, maxHeightMm) {
+  const normTable = { ...table, x: 0, y: 0 }
+  const occupantNameOf = occupantNameOfFor(guests, occupantIds)
 
-  if (tables.length === 0) {
-    doc.setFontSize(14)
-    doc.text('Aucune table créée.', 14, 20)
+  const bounds = diagramBounds(normTable, occupantNameOf)
+  const spanX = bounds.maxX - bounds.minX
+  const spanY = bounds.maxY - bounds.minY
+  const scale = Math.min(maxWidthMm / spanX, maxHeightMm / spanY, MAX_SCALE)
+  const originX = centerX - ((bounds.minX + bounds.maxX) / 2) * scale
+  const originY = centerY - ((bounds.minY + bounds.maxY) / 2) * scale
+  const toPdf = (x, y) => ({ x: originX + x * scale, y: originY + y * scale })
+
+  drawTableAtScale(doc, normTable, occupantNameOf, toPdf, scale, { nameFontSizeMm: 2.6, tableFontSizeMm: 3 })
+}
+
+// Plan d'ensemble : toutes les tables sur une seule page, à leurs positions
+// réelles les unes par rapport aux autres (mêmes coordonnées que la "vue
+// d'ensemble" à l'écran), mises à l'échelle pour tenir sur une page paysage.
+function drawFullPlan(doc, guests, tables, placement) {
+  const occupantNameOfByTable = new Map()
+  let minX = Infinity
+  let maxX = -Infinity
+  let minY = Infinity
+  let maxY = -Infinity
+
+  for (const table of tables) {
+    const occupantNameOf = occupantNameOfFor(guests, occupantIdsForTable(placement, table.id))
+    occupantNameOfByTable.set(table.id, occupantNameOf)
+    const bounds = diagramBounds(table, occupantNameOf)
+    minX = Math.min(minX, bounds.minX)
+    maxX = Math.max(maxX, bounds.maxX)
+    minY = Math.min(minY, bounds.minY)
+    maxY = Math.max(maxY, bounds.maxY)
   }
 
-  tables.forEach((table, index) => {
-    if (index > 0) doc.addPage()
+  const marginX = 14
+  const topMargin = 32
+  const bottomMargin = 14
+  const availableWidth = doc.internal.pageSize.getWidth() - marginX * 2
+  const availableHeight = doc.internal.pageSize.getHeight() - topMargin - bottomMargin
+
+  const spanX = maxX - minX
+  const spanY = maxY - minY
+  const scale = Math.min(availableWidth / spanX, availableHeight / spanY, MAX_SCALE)
+  const originX = marginX + (availableWidth - spanX * scale) / 2 - minX * scale
+  const originY = topMargin + (availableHeight - spanY * scale) / 2 - minY * scale
+  const toPdf = (x, y) => ({ x: originX + x * scale, y: originY + y * scale })
+
+  for (const table of tables) {
+    drawTableAtScale(doc, table, occupantNameOfByTable.get(table.id), toPdf, scale, {
+      nameFontSizeMm: 2,
+      tableFontSizeMm: 2.6,
+    })
+  }
+}
+
+export function exportTablePlanPdf(project) {
+  const { name, guests, tables, placement } = project
+  const title = name || 'Plan de table'
+  const doc = new jsPDF({ orientation: tables.length > 0 ? 'landscape' : 'portrait' })
+
+  if (tables.length === 0) {
+    drawLabel(doc, title, 14, 14, { align: 'start', baseline: 'top', fontSizeMm: 6, weight: 600 })
+    drawLabel(doc, 'Aucune table créée.', 14, 30, { align: 'start', baseline: 'top', fontSizeMm: 4 })
+    doc.save(safeFileName(title, 'plan-de-table'))
+    return
+  }
+
+  drawLabel(doc, title, 14, 14, { align: 'start', baseline: 'top', fontSizeMm: 6, weight: 600 })
+  drawLabel(doc, "Plan d'ensemble", 14, 25, {
+    align: 'start',
+    baseline: 'top',
+    fontSizeMm: 3.6,
+    weight: 500,
+    color: SAGE_CSS,
+  })
+  drawFullPlan(doc, guests, tables, placement)
+
+  tables.forEach((table) => {
+    doc.addPage('a4', 'portrait')
     drawLabel(doc, title, 14, 14, { align: 'start', baseline: 'top', fontSizeMm: 6, weight: 600 })
     drawLabel(doc, table.label, 14, 27, { align: 'start', baseline: 'top', fontSizeMm: 4.5, weight: 600 })
     doc.setFontSize(10)
@@ -210,12 +285,7 @@ export function exportTablePlanPdf(project) {
       37,
     )
 
-    const occupantIds = []
-    for (const [guestId, p] of Object.entries(placement)) {
-      if (p.tableId === table.id) occupantIds[p.seatIndex] = guestId
-    }
-
-    drawTableDiagram(doc, table, guests, occupantIds, 105, 150, 170, 210)
+    drawTableDiagram(doc, table, guests, occupantIdsForTable(placement, table.id), 105, 150, 170, 210)
   })
 
   doc.save(safeFileName(title, 'plan-de-table'))
