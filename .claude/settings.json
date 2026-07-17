@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(chromium-cli --help)",
+      "Read(//tmp/**)",
+      "Bash(curl -s -m 5 http://localhost:5173/)",
+      "Bash(npx --yes playwright --version)",
+      "Bash(npx --yes playwright install chromium --with-deps)",
+      "Bash(npm run *)",
+      "Bash(npm uninstall *)",
+      "Bash(npm install *)",
+      "Bash(npx oxlint *)",
+      "Bash(npx vite *)",
+      "Read(//c/Users/matti/AppData/Local/Temp/**)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(node _pdf_test2.cjs)",
+      "Bash(node -e ' *)",
+      "Bash(git commit -m ' *)",
+      "Bash(rm -f _full_plan_test.cjs)",
+      "Bash(git add *)"
+    ]
+  }
+}
