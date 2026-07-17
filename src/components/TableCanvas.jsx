@@ -144,10 +144,25 @@ function TableCanvas({
     setFocusedTableId(tables[nextIndex].id)
   }
 
-  // Géométrie calculée une seule fois par table, réutilisée pour le rendu
-  // et pour calculer les limites réelles du plan (les noms longs peuvent
-  // dépasser le rayon "standard" de la table : il ne faut jamais les couper).
+  // Géométrie utilisée pour le RENDU (suit la position live pendant un
+  // glisser, pour que la table suive le doigt/curseur).
   const tableRenders = displayTables.map((table) => {
+    const isRound = table.shape === 'round'
+    const geometry = isRound ? roundTableSeats(table) : rectTableSeats(table)
+    return { table, isRound, ...geometry }
+  })
+
+  // Géométrie utilisée pour calculer les limites du viewBox — délibérément
+  // basée sur les positions déjà committées (`tables`), jamais sur la
+  // position live d'un glisser en cours. Si le viewBox changeait pendant le
+  // drag, la conversion écran→SVG (`getScreenCTM`) changerait à chaque
+  // pointermove, ce qui amortit/bloque le geste (constaté sur téléphone :
+  // la table n'avance quasiment plus). Le viewBox se recale proprement une
+  // fois le glisser terminé (dragTable redevient null).
+  const boundsTables = effectiveFocusedId
+    ? tables.filter((t) => t.id === effectiveFocusedId)
+    : tables
+  const boundsTableRenders = boundsTables.map((table) => {
     const isRound = table.shape === 'round'
     const geometry = isRound ? roundTableSeats(table) : rectTableSeats(table)
     return { table, isRound, ...geometry }
@@ -158,7 +173,7 @@ function TableCanvas({
   let maxX = 300
   let maxY = 260
 
-  for (const { table, seats } of tableRenders) {
+  for (const { table, seats } of boundsTableRenders) {
     const footprint = tableFootprint(table)
     minX = Math.min(minX, table.x - footprint)
     minY = Math.min(minY, table.y - footprint)

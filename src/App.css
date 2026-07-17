@@ -907,6 +907,11 @@ input.project-name-input:focus {
   border-radius: 14px;
   background: var(--bg-alt);
   padding: 4px;
+  /* Le plan se redimensionne pour tenir dans le conteneur (voir .svg-scroll
+     svg ci-dessous) : ce scroll horizontal ne sert plus qu'en filet de
+     sécurité. Le désactiver au toucher évite qu'un geste de glisser une
+     table ne soit disputé par un scroll natif du conteneur sur mobile. */
+  touch-action: none;
 }
 .svg-scroll svg {
   /* Le plan garde sa taille naturelle tant qu'il rentre, et se réduit
