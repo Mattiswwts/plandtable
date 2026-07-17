@@ -18,7 +18,9 @@
       "Bash(node -e ' *)",
       "Bash(git commit -m ' *)",
       "Bash(rm -f _full_plan_test.cjs)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(node _drag_precise_test.cjs)",
+      "Bash(tasklist //FI \"IMAGENAME eq node.exe\")"
     ]
   }
 }
